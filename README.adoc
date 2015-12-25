@@ -1,0 +1,21 @@
+## Nonobot Slack Adapter
+
+Slack adapter for Nonobot
+
+### Configuration for Nonobot standalone
+
+Nonobot Verticle config:
+
+----
+{
+  "slack.token": "your-slack-token"
+}
+----
+
+or as ENV variable:
+
+----
+export SLACK_TOKEN=your-slack-token
+----
+
+Other link:src/main/asciidoc/dataobjects.adoc[options]
