@@ -1,7 +1,7 @@
 package io.nonobot.slack;
 
 import io.nonobot.core.NonoBot;
-import io.nonobot.core.chat.ChatRouter;
+import io.nonobot.core.message.MessageRouter;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClientOptions;
@@ -88,9 +88,9 @@ public class SlackTest {
 
   private void testMessage(TestContext context, String text) {
     Async done = context.async();
-    ChatRouter router = ChatRouter.create(vertx, ar -> {});
+    MessageRouter router = MessageRouter.create(vertx);
     router.handler().respond(".*", msg -> {
-      context.assertEquals("ping", msg.content());
+      context.assertEquals("ping", msg.body());
       msg.reply("pong");
     }).create();
     startServer(context, ws -> {
