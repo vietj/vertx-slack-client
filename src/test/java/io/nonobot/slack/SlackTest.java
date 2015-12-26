@@ -1,9 +1,12 @@
 package io.nonobot.slack;
 
 import io.nonobot.core.NonoBot;
+import io.nonobot.core.chat.ChatRouter;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.ServerWebSocket;
 import io.vertx.core.http.WebSocketBase;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -24,7 +27,7 @@ public class SlackTest {
 
   private static JsonObject json = new JsonObject().
       put("channels", new JsonArray()).
-      put("self", new JsonObject().put("id", "")).
+      put("self", new JsonObject().put("id", "12345").put("name", "slack_name")).
       put("url", "ws://localhost:8080/");
 
   protected Vertx vertx;
@@ -41,23 +44,84 @@ public class SlackTest {
 
   @Test
   public void testConnectOk(TestContext context) {
-    Async done = context.async(2);
+    Async done = context.async();
+    startServer(context, ws -> {
+      ws.close();
+      done.countDown();
+    });
+  }
+
+  @Test
+  public void testMessage1(TestContext context) {
+    testMessage(context, "<@12345> ping");
+  }
+
+  @Test
+  public void testMessage2(TestContext context) {
+    testMessage(context, "<@12345>:ping");
+  }
+
+  @Test
+  public void testMessage3(TestContext context) {
+    testMessage(context, "<@12345>: ping");
+  }
+
+  @Test
+  public void testMessage4(TestContext context) {
+    testMessage(context, "slack_name ping");
+  }
+
+  @Test
+  public void testMessage5(TestContext context) {
+    testMessage(context, "@slack_name ping");
+  }
+
+  @Test
+  public void testMessage6(TestContext context) {
+    testMessage(context, "@slack_name:ping");
+  }
+
+  @Test
+  public void testMessage7(TestContext context) {
+    testMessage(context, "slack_name:ping");
+  }
+
+  private void testMessage(TestContext context, String text) {
+    Async done = context.async();
+    ChatRouter router = ChatRouter.create(vertx, ar -> {});
+    router.handler().respond(".*", msg -> {
+      context.assertEquals("ping", msg.content());
+      msg.reply("pong");
+    }).create();
+    startServer(context, ws -> {
+      ws.handler(buf -> {
+        JsonObject msg = buf.toJsonObject();
+        context.assertEquals("message", msg.getString("type"));
+        context.assertEquals("pong", msg.getString("text"));
+        ws.close();
+        done.complete();
+      });
+      ws.writeFinalTextFrame(new JsonObject().put("type", "message").put("text", text).encode());
+    });
+  }
+
+  private void startServer(TestContext context, Handler<ServerWebSocket> handler) {
     NonoBot bot = NonoBot.create(vertx);
-    SlackAdapter slackAdapter = SlackAdapter.create(bot, new SlackOptions().setClientOptions(new HttpClientOptions().
-        setDefaultHost("localhost").setDefaultPort(8080)));
+    SlackAdapter slackAdapter = SlackAdapter.create(
+        bot,
+        new SlackOptions().setClientOptions(new HttpClientOptions().setDefaultHost("localhost").setDefaultPort(8080)));
+    Async started = context.async();
     HttpServer server = vertx.createHttpServer();
     server.requestHandler(req -> {
       req.response().putHeader("Content-Type", "application/json").end(json.encode());
     });
-    server.websocketHandler(ws -> {
-      ws.close();
-      done.countDown();
-    });
+    server.websocketHandler(handler);
     server.listen(8080, "localhost", context.asyncAssertSuccess(v -> {
       slackAdapter.connect(context.asyncAssertSuccess(v2 -> {
-        done.countDown();
+        started.countDown();
       }));
     }));
+    started.awaitSuccess(2000);
   }
 
   @Test

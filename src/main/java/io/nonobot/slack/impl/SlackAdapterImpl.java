@@ -2,6 +2,7 @@ package io.nonobot.slack.impl;
 
 import io.nonobot.core.NonoBot;
 import io.nonobot.core.client.BotClient;
+import io.nonobot.core.client.ClientOptions;
 import io.nonobot.slack.SlackAdapter;
 import io.nonobot.slack.SlackOptions;
 import io.vertx.core.AsyncResult;
@@ -18,11 +19,14 @@ import io.vertx.core.json.JsonObject;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author <a href="mailto:julien@julienviet.com">Julien Viet</a>
@@ -36,7 +40,8 @@ public class SlackAdapterImpl implements SlackAdapter {
   private final Future<Void> completion = Future.future();
   private long serial;
   private Set<String> channels = new HashSet<>(); // All channels we belong to
-  private String id; // Our own id
+  private String slackId; // Our own id
+  private String slackName; // The slack name
 
   public SlackAdapterImpl(NonoBot bot, SlackOptions options) {
     this.bot = bot;
@@ -96,7 +101,8 @@ public class SlackAdapterImpl implements SlackAdapter {
             }
           }
 
-          id = respObj.getJsonObject("self").getString("id");
+          slackId = respObj.getJsonObject("self").getString("id");
+          slackName = respObj.getJsonObject("self").getString("name");
           client.websocket(port, wsURL.getHost(), wsURL.getPath(), ws -> wsOpen(ws),
               err -> {
                 if (!completion.isComplete()) {
@@ -139,6 +145,7 @@ public class SlackAdapterImpl implements SlackAdapter {
     bot.client(ar -> {
       if (ar.succeeded()) {
         BotClient client = ar.result();
+        client.rename(Arrays.asList("<@" + slackId + ">", slackName, "@" + slackName));
         schedulePing(serial);
         handler.set(frame -> {
           wsHandle(frame, client);
@@ -171,17 +178,8 @@ public class SlackAdapterImpl implements SlackAdapter {
     channels.add(channel);
   }
 
-  private synchronized void handleMessage(BotClient client, String text, String channel) {
-    String msg;
-    if (channels.contains(channel)) {
-      if (text.startsWith("<@" + id + ">")) {
-        msg = client.name() + text.substring(id.length() + 3); // Replace mention to the robot
-      } else {
-        return;
-      }
-    } else {
-      msg = client.name() + " " + text;
-    }
+  private synchronized void handleMessage(BotClient client, String msg, String channel) {
+    System.out.println("Handling message from " + channel + ": " + msg);
     client.process(msg, reply -> {
       if (reply.succeeded()) {
         synchronized (SlackAdapterImpl.this) {
@@ -218,7 +216,6 @@ public class SlackAdapterImpl implements SlackAdapter {
       case "message":
         String text = json.getString("text");
         String channel = json.getString("channel");
-        System.out.println("Message from " + channel + ": " + text);
         if (text != null) {
           handleMessage(client, text, channel);
         } else {
