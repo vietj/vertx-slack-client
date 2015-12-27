@@ -18,14 +18,14 @@ package io.nonobot.groovy.slack;
 import groovy.transform.CompileStatic
 import io.vertx.lang.groovy.InternalHelper
 import io.vertx.core.json.JsonObject
+import io.nonobot.groovy.core.adapter.BotAdapter
 import io.nonobot.slack.SlackOptions
-import io.nonobot.groovy.core.adapter.Adapter
 import io.nonobot.groovy.core.NonoBot
 /**
  * @author <a href="mailto:julien@julienviet.com">Julien Viet</a>
 */
 @CompileStatic
-public class SlackAdapter extends Adapter {
+public class SlackAdapter extends BotAdapter {
   private final def io.nonobot.slack.SlackAdapter delegate;
   public SlackAdapter(Object delegate) {
     super((io.nonobot.slack.SlackAdapter) delegate);

@@ -142,7 +142,7 @@ public class SlackAdapterImpl implements SlackAdapter {
     }
     LinkedList<WebSocketFrame> pendingFrames = new LinkedList<>();
     AtomicReference<Handler<WebSocketFrame>> handler = new AtomicReference<>();
-    bot.client(ar -> {
+    bot.createClient(ar -> {
       if (ar.succeeded()) {
         BotClient client = ar.result();
         client.rename(Arrays.asList("<@" + slackId + ">", slackName, "@" + slackName));

@@ -88,11 +88,11 @@ public class SlackTest {
 
   private void testMessage(TestContext context, String text) {
     Async done = context.async();
-    MessageRouter router = MessageRouter.create(vertx);
-    router.handler().respond(".*", msg -> {
+    MessageRouter router = MessageRouter.getShared(vertx);
+    router.respond(".*", msg -> {
       context.assertEquals("ping", msg.body());
       msg.reply("pong");
-    }).create();
+    });
     startServer(context, ws -> {
       ws.handler(buf -> {
         JsonObject msg = buf.toJsonObject();

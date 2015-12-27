@@ -19,8 +19,8 @@ package io.nonobot.rxjava.slack;
 import java.util.Map;
 import io.vertx.lang.rxjava.InternalHelper;
 import rx.Observable;
+import io.nonobot.rxjava.core.adapter.BotAdapter;
 import io.nonobot.slack.SlackOptions;
-import io.nonobot.rxjava.core.adapter.Adapter;
 import io.nonobot.rxjava.core.NonoBot;
 
 /**
@@ -30,7 +30,7 @@ import io.nonobot.rxjava.core.NonoBot;
  * NOTE: This class has been automatically generated from the {@link io.nonobot.slack.SlackAdapter original} non RX-ified interface using Vert.x codegen.
  */
 
-public class SlackAdapter extends Adapter {
+public class SlackAdapter extends BotAdapter {
 
   final io.nonobot.slack.SlackAdapter delegate;
 

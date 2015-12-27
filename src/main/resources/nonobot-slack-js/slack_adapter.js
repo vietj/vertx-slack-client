@@ -16,7 +16,7 @@
 
 /** @module nonobot-slack-js/slack_adapter */
 var utils = require('vertx-js/util/utils');
-var Adapter = require('nonobot-js/adapter');
+var BotAdapter = require('nonobot-js/bot_adapter');
 var NonoBot = require('nonobot-js/nono_bot');
 
 var io = Packages.io;
@@ -32,7 +32,7 @@ var SlackAdapter = function(j_val) {
 
   var j_slackAdapter = j_val;
   var that = this;
-  Adapter.call(this, j_val);
+  BotAdapter.call(this, j_val);
 
   // A reference to the underlying Java delegate
   // NOTE! This is an internal API and must not be used in user code.

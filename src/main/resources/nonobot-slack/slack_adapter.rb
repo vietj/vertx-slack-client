@@ -1,10 +1,10 @@
-require 'nonobot/adapter'
+require 'nonobot/bot_adapter'
 require 'nonobot/nono_bot'
 require 'vertx/util/utils.rb'
 # Generated from io.nonobot.slack.SlackAdapter
 module NonobotSlack
   #  @author <a href="mailto:julien@julienviet.com">Julien Viet</a>
-  class SlackAdapter < ::Nonobot::Adapter
+  class SlackAdapter < ::Nonobot::BotAdapter
     # @private
     # @param j_del [::NonobotSlack::SlackAdapter] the java delegate
     def initialize(j_del)
