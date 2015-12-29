@@ -1,6 +1,5 @@
 package io.nonobot.slack;
 
-import io.nonobot.core.NonoBot;
 import io.nonobot.core.adapter.BotAdapter;
 import io.nonobot.slack.impl.SlackAdapterImpl;
 import io.vertx.codegen.annotations.VertxGen;
@@ -11,7 +10,7 @@ import io.vertx.codegen.annotations.VertxGen;
 @VertxGen
 public interface SlackAdapter extends BotAdapter {
 
-  static SlackAdapter create(NonoBot bot, SlackOptions options) {
-    return new SlackAdapterImpl(bot, options);
+  static SlackAdapter create(SlackOptions options) {
+    return new SlackAdapterImpl(options);
   }
 }

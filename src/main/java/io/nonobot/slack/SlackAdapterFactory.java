@@ -1,7 +1,6 @@
 package io.nonobot.slack;
 
 import io.nonobot.core.Config;
-import io.nonobot.core.NonoBot;
 import io.nonobot.core.adapter.*;
 import io.nonobot.core.spi.BotAdapterFactory;
 
@@ -11,10 +10,10 @@ import io.nonobot.core.spi.BotAdapterFactory;
 public class SlackAdapterFactory implements BotAdapterFactory {
 
   @Override
-  public BotAdapter create(NonoBot bot, Config config) {
+  public BotAdapter create(Config config) {
     String slackToken = config.getProperty("slack.token");
     if (slackToken != null) {
-      return SlackAdapter.create(bot, new SlackOptions().setToken(slackToken));
+      return SlackAdapter.create(new SlackOptions().setToken(slackToken));
     }
     return null;
   }

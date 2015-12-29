@@ -21,7 +21,6 @@ import io.vertx.lang.rxjava.InternalHelper;
 import rx.Observable;
 import io.nonobot.rxjava.core.adapter.BotAdapter;
 import io.nonobot.slack.SlackOptions;
-import io.nonobot.rxjava.core.NonoBot;
 
 /**
  * @author <a href="mailto:julien@julienviet.com">Julien Viet</a>
@@ -43,8 +42,8 @@ public class SlackAdapter extends BotAdapter {
     return delegate;
   }
 
-  public static SlackAdapter create(NonoBot bot, SlackOptions options) { 
-    SlackAdapter ret= SlackAdapter.newInstance(io.nonobot.slack.SlackAdapter.create((io.nonobot.core.NonoBot) bot.getDelegate(), options));
+  public static SlackAdapter create(SlackOptions options) { 
+    SlackAdapter ret= SlackAdapter.newInstance(io.nonobot.slack.SlackAdapter.create(options));
     return ret;
   }
 

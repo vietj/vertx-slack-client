@@ -20,7 +20,6 @@ import io.vertx.lang.groovy.InternalHelper
 import io.vertx.core.json.JsonObject
 import io.nonobot.groovy.core.adapter.BotAdapter
 import io.nonobot.slack.SlackOptions
-import io.nonobot.groovy.core.NonoBot
 /**
  * @author <a href="mailto:julien@julienviet.com">Julien Viet</a>
 */
@@ -34,8 +33,8 @@ public class SlackAdapter extends BotAdapter {
   public Object getDelegate() {
     return delegate;
   }
-  public static SlackAdapter create(NonoBot bot, Map<String, Object> options) {
-    def ret= InternalHelper.safeCreate(io.nonobot.slack.SlackAdapter.create((io.nonobot.core.NonoBot)bot.getDelegate(), options != null ? new io.nonobot.slack.SlackOptions(new io.vertx.core.json.JsonObject(options)) : null), io.nonobot.groovy.slack.SlackAdapter.class);
+  public static SlackAdapter create(Map<String, Object> options = [:]) {
+    def ret= InternalHelper.safeCreate(io.nonobot.slack.SlackAdapter.create(options != null ? new io.nonobot.slack.SlackOptions(new io.vertx.core.json.JsonObject(options)) : null), io.nonobot.groovy.slack.SlackAdapter.class);
     return ret;
   }
 }

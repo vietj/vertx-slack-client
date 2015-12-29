@@ -17,7 +17,6 @@
 /** @module nonobot-slack-js/slack_adapter */
 var utils = require('vertx-js/util/utils');
 var BotAdapter = require('nonobot-js/bot_adapter');
-var NonoBot = require('nonobot-js/nono_bot');
 
 var io = Packages.io;
 var JsonObject = io.vertx.core.json.JsonObject;
@@ -43,14 +42,13 @@ var SlackAdapter = function(j_val) {
 /**
 
  @memberof module:nonobot-slack-js/slack_adapter
- @param bot {NonoBot} 
  @param options {Object} 
  @return {SlackAdapter}
  */
-SlackAdapter.create = function(bot, options) {
+SlackAdapter.create = function(options) {
   var __args = arguments;
-  if (__args.length === 2 && typeof __args[0] === 'object' && __args[0]._jdel && (typeof __args[1] === 'object' && __args[1] != null)) {
-    return utils.convReturnVertxGen(JSlackAdapter["create(io.nonobot.core.NonoBot,io.nonobot.slack.SlackOptions)"](bot._jdel, options != null ? new SlackOptions(new JsonObject(JSON.stringify(options))) : null), SlackAdapter);
+  if (__args.length === 1 && (typeof __args[0] === 'object' && __args[0] != null)) {
+    return utils.convReturnVertxGen(JSlackAdapter["create(io.nonobot.slack.SlackOptions)"](options != null ? new SlackOptions(new JsonObject(JSON.stringify(options))) : null), SlackAdapter);
   } else throw new TypeError('function invoked with invalid arguments');
 };
 
