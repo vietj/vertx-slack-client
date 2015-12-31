@@ -142,6 +142,9 @@ public class SlackAdapterImpl implements SlackAdapter {
         pendingFrames.add(frame);
       }
     });
+    client.messageHandler(msg -> {
+      send(msg.chatId(), msg.body());
+    });
     ws.closeHandler(v -> {
       wsClose(client);
     });
@@ -158,18 +161,22 @@ public class SlackAdapterImpl implements SlackAdapter {
     channels.add(channel);
   }
 
+  private void send(String channel, String msg) {
+    synchronized (SlackAdapterImpl.this) {
+      serial++; // Need to sync on SlackAdapterImpl
+      websocket.writeFinalTextFrame(new JsonObject().
+          put("id", UUID.randomUUID().toString()).
+          put("type", "message").
+          put("channel", channel).
+          put("text", msg).encode());
+    }
+  }
+
   private synchronized void handleMessage(BotClient client, String msg, String channel) {
     System.out.println("Handling message from " + channel + ": " + msg);
-    client.receiveMessage(new ReceiveOptions(), msg, reply -> {
+    client.receiveMessage(new ReceiveOptions().setChatId(channel), msg, reply -> {
       if (reply.succeeded()) {
-        synchronized (SlackAdapterImpl.this) {
-          serial++; // Need to sync on SlackAdapterImpl
-          websocket.writeFinalTextFrame(new JsonObject().
-              put("id", UUID.randomUUID().toString()).
-              put("type", "message").
-              put("channel", channel).
-              put("text", reply.result()).encode());
-        }
+        send(channel, reply.result());
       } else {
         System.out.println("no reply for " + msg);
         reply.cause().printStackTrace();
@@ -194,6 +201,8 @@ public class SlackAdapterImpl implements SlackAdapter {
         break;
       }
       case "message":
+        System.out.println("json = " + json);
+
         String text = json.getString("text");
         String channel = json.getString("channel");
         if (text != null) {
