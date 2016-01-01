@@ -19,8 +19,9 @@ package io.nonobot.rxjava.slack;
 import java.util.Map;
 import io.vertx.lang.rxjava.InternalHelper;
 import rx.Observable;
-import io.nonobot.rxjava.core.adapter.BotAdapter;
+import io.nonobot.rxjava.core.adapter.ConnectionRequest;
 import io.nonobot.slack.SlackOptions;
+import io.vertx.core.Handler;
 
 /**
  * @author <a href="mailto:julien@julienviet.com">Julien Viet</a>
@@ -29,17 +30,20 @@ import io.nonobot.slack.SlackOptions;
  * NOTE: This class has been automatically generated from the {@link io.nonobot.slack.SlackAdapter original} non RX-ified interface using Vert.x codegen.
  */
 
-public class SlackAdapter extends BotAdapter {
+public class SlackAdapter implements Handler<ConnectionRequest> {
 
   final io.nonobot.slack.SlackAdapter delegate;
 
   public SlackAdapter(io.nonobot.slack.SlackAdapter delegate) {
-    super(delegate);
     this.delegate = delegate;
   }
 
   public Object getDelegate() {
     return delegate;
+  }
+
+  public void handle(ConnectionRequest arg0) { 
+    this.delegate.handle((io.nonobot.core.adapter.ConnectionRequest) arg0.getDelegate());
   }
 
   public static SlackAdapter create(SlackOptions options) { 

@@ -1,5 +1,6 @@
 package io.nonobot.slack.impl;
 
+import io.nonobot.core.adapter.ConnectionRequest;
 import io.nonobot.core.client.BotClient;
 import io.nonobot.core.client.ReceiveOptions;
 import io.nonobot.slack.SlackAdapter;
@@ -41,12 +42,20 @@ public class SlackAdapterImpl implements SlackAdapter {
   }
 
   @Override
-  public void connect(BotClient client, Future<Void> completion) {
+  public void handle(ConnectionRequest request) {
     if (websocket != null) {
       throw new IllegalStateException("Already connected");
     }
 
-    Vertx vertx = client.bot().vertx();
+    BotClient client = request.client();
+
+    client.closeHandler(v -> {
+      if (websocket != null) {
+        websocket.close();
+      }
+    });
+
+    Vertx vertx = client.vertx();
 
     HttpClient httpClient = vertx.createHttpClient(options.getClientOptions());
     String token = this.options.getToken();
@@ -56,8 +65,8 @@ public class SlackAdapterImpl implements SlackAdapter {
         Buffer buffer = Buffer.buffer();
         resp.handler(buffer::appendBuffer);
         resp.exceptionHandler(err -> {
-          if (!completion.isComplete()) {
-            completion.fail(err);
+          if (!request.isComplete()) {
+            request.fail(err);
           }
         });
         resp.endHandler(v1 -> {
@@ -89,10 +98,10 @@ public class SlackAdapterImpl implements SlackAdapter {
 
           slackId = respObj.getJsonObject("self").getString("id");
           slackName = respObj.getJsonObject("self").getString("name");
-          httpClient.websocket(port, wsURL.getHost(), wsURL.getPath(), ws -> wsOpen(client, completion, ws),
+          httpClient.websocket(port, wsURL.getHost(), wsURL.getPath(), ws -> wsOpen(client, request, ws),
               err -> {
-                if (!completion.isComplete()) {
-                  completion.fail(err);
+                if (!request.isComplete()) {
+                  request.fail(err);
                 }
               });
         });
@@ -101,8 +110,8 @@ public class SlackAdapterImpl implements SlackAdapter {
       }
     });
     req.exceptionHandler(err -> {
-      if (completion != null && !completion.isComplete()) {
-        completion.fail(err);
+      if (!request.isComplete()) {
+        request.fail(err);
       }
     });
     req.end();
@@ -127,8 +136,8 @@ public class SlackAdapterImpl implements SlackAdapter {
     }
     LinkedList<WebSocketFrame> pendingFrames = new LinkedList<>();
     AtomicReference<Handler<WebSocketFrame>> handler = new AtomicReference<>();
-    client.rename(Arrays.asList("<@" + slackId + ">", slackName, "@" + slackName));
-    schedulePing(client.bot().vertx(), serial);
+    client.alias(Arrays.asList("<@" + slackId + ">", slackName, "@" + slackName));
+    schedulePing(client.vertx(), serial);
     handler.set(frame -> {
       wsHandle(frame, client);
     });
@@ -227,12 +236,5 @@ public class SlackAdapterImpl implements SlackAdapter {
       websocket = null;
     }
     client.close();
-  }
-
-  @Override
-  public synchronized void close() {
-    if (websocket != null) {
-      websocket.close();
-    }
   }
 }

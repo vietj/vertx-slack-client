@@ -1,10 +1,11 @@
 package io.nonobot.slack;
 
 import io.nonobot.core.Bot;
+import io.nonobot.core.adapter.BotAdapter;
+import io.nonobot.core.chat.ChatRouter;
 import io.nonobot.core.client.BotClient;
 import io.nonobot.core.client.ClientOptions;
 import io.nonobot.core.client.impl.BotClientImpl;
-import io.nonobot.core.handler.MessageRouter;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -15,6 +16,7 @@ import io.vertx.core.http.WebSocketBase;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.NetServer;
+import io.vertx.core.net.NetSocket;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -46,12 +48,12 @@ public class SlackTest {
     vertx.close(context.asyncAssertSuccess());
   }
 
-  private BotClient client(Bot bot) throws Exception {
-    return client(bot, null);
+  private BotClient client() throws Exception {
+    return client(null);
   }
 
-  private BotClient client(Bot bot, Handler<Void> closeHandler) throws Exception {
-    return new BotClientImpl(bot, vertx.getOrCreateContext(), new ClientOptions()) {
+  private BotClient client(Handler<Void> closeHandler) throws Exception {
+    return new BotClientImpl(vertx, vertx.getOrCreateContext(), new ClientOptions(), ar -> {}) {
       @Override
       public void close() {
         if (closeHandler != null) {
@@ -107,7 +109,7 @@ public class SlackTest {
 
   private void testMessage(TestContext context, String text) throws Exception {
     Async done = context.async();
-    MessageRouter router = MessageRouter.getShared(vertx);
+    ChatRouter router = Bot.getShared(vertx).chatRouter();
     router.respond(".*", msg -> {
       context.assertEquals("ping", msg.body());
       msg.reply("pong");
@@ -126,9 +128,9 @@ public class SlackTest {
 
   private void startServer(TestContext context, Handler<ServerWebSocket> handler) throws Exception {
     Bot bot = Bot.create(vertx);
-    BotClient client = client(bot);
-    SlackAdapter slackAdapter = SlackAdapter.create(
-        new SlackOptions().setClientOptions(new HttpClientOptions().setDefaultHost("localhost").setDefaultPort(8080)));
+    BotClient client = client();
+    BotAdapter slackAdapter = BotAdapter.create(vertx).requestHandler(SlackAdapter.create(
+        new SlackOptions().setClientOptions(new HttpClientOptions().setDefaultHost("localhost").setDefaultPort(8080))));
     Async started = context.async();
     HttpServer server = vertx.createHttpServer();
     server.requestHandler(req -> {
@@ -148,9 +150,9 @@ public class SlackTest {
   @Test
   public void testConnectHttpError1(TestContext context) throws Exception {
     Bot bot = Bot.create(vertx);
-    BotClient client = client(bot);
-    SlackAdapter slackAdapter = SlackAdapter.create(new SlackOptions().setClientOptions(new HttpClientOptions().
-        setDefaultHost("localhost").setDefaultPort(8080)));
+    BotClient client = client();
+    BotAdapter slackAdapter = BotAdapter.create(vertx).requestHandler(SlackAdapter.create(new SlackOptions().setClientOptions(new HttpClientOptions().
+        setDefaultHost("localhost").setDefaultPort(8080))));
     Future<Void> completionFuture = Future.future();
     completionFuture.setHandler(context.asyncAssertFailure());
     slackAdapter.connect(client, completionFuture);
@@ -159,13 +161,11 @@ public class SlackTest {
   @Test
   public void testConnectHttpError2(TestContext context) throws Exception {
     Bot bot = Bot.create(vertx);
-    BotClient client = client(bot);
-    SlackAdapter slackAdapter = SlackAdapter.create(new SlackOptions().setClientOptions(new HttpClientOptions().
-        setDefaultHost("localhost").setDefaultPort(8080)));
+    BotClient client = client();
+    BotAdapter slackAdapter = BotAdapter.create(vertx).requestHandler(SlackAdapter.create(new SlackOptions().setClientOptions(new HttpClientOptions().
+        setDefaultHost("localhost").setDefaultPort(8080))));
     NetServer server = vertx.createNetServer();
-    server.connectHandler(socket -> {
-      socket.close();
-    });
+    server.connectHandler(NetSocket::close);
     server.listen(8080, "localhost", context.asyncAssertSuccess(v -> {
       Future<Void> completionFuture = Future.future();
       completionFuture.setHandler(context.asyncAssertFailure());
@@ -176,9 +176,9 @@ public class SlackTest {
   @Test
   public void testConnectWebSocketError(TestContext context) throws Exception {
     Bot bot = Bot.create(vertx);
-    BotClient client = client(bot);
-    SlackAdapter slackAdapter = SlackAdapter.create(new SlackOptions().setClientOptions(new HttpClientOptions().
-        setDefaultHost("localhost").setDefaultPort(8080)));
+    BotClient client = client();
+    BotAdapter slackAdapter = BotAdapter.create(vertx).requestHandler(SlackAdapter.create(new SlackOptions().setClientOptions(new HttpClientOptions().
+        setDefaultHost("localhost").setDefaultPort(8080))));
     HttpServer server = vertx.createHttpServer();
     server.requestHandler(req -> {
       req.response().putHeader("Content-Type", "application/json").end(json.copy().put("url", "ws://localhost:8081/").encode());
@@ -194,9 +194,9 @@ public class SlackTest {
   public void testServerClose(TestContext context) throws Exception {
     Async done = context.async(1);
     Bot bot = Bot.create(vertx);
-    BotClient client = client(bot, v -> done.complete());
-    SlackAdapter slackAdapter = SlackAdapter.create(new SlackOptions().setClientOptions(new HttpClientOptions().
-        setDefaultHost("localhost").setDefaultPort(8080)));
+    BotClient client = client(v -> done.complete());
+    BotAdapter slackAdapter = BotAdapter.create(vertx).requestHandler(SlackAdapter.create(new SlackOptions().setClientOptions(new HttpClientOptions().
+        setDefaultHost("localhost").setDefaultPort(8080))));
     HttpServer server = vertx.createHttpServer();
     server.requestHandler(req -> {
       req.response().putHeader("Content-Type", "application/json").end(json.encode());
@@ -215,9 +215,9 @@ public class SlackTest {
   public void testClientClose(TestContext context) throws Exception {
     Async done = context.async(1);
     Bot bot = Bot.create(vertx);
-    BotClient client = client(bot, v -> done.complete());
-    SlackAdapter slackAdapter = SlackAdapter.create(new SlackOptions().setClientOptions(new HttpClientOptions().
-        setDefaultHost("localhost").setDefaultPort(8080)));
+    BotClient client = client(v -> done.complete());
+    BotAdapter slackAdapter = BotAdapter.create(vertx).requestHandler(SlackAdapter.create(new SlackOptions().setClientOptions(new HttpClientOptions().
+        setDefaultHost("localhost").setDefaultPort(8080))));
     HttpServer server = vertx.createHttpServer();
     server.requestHandler(req -> {
       req.response().putHeader("Content-Type", "application/json").end(json.encode());

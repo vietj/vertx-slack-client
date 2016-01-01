@@ -16,7 +16,7 @@
 
 /** @module nonobot-slack-js/slack_adapter */
 var utils = require('vertx-js/util/utils');
-var BotAdapter = require('nonobot-js/bot_adapter');
+var ConnectionRequest = require('nonobot-js/connection_request');
 
 var io = Packages.io;
 var JsonObject = io.vertx.core.json.JsonObject;
@@ -31,7 +31,18 @@ var SlackAdapter = function(j_val) {
 
   var j_slackAdapter = j_val;
   var that = this;
-  BotAdapter.call(this, j_val);
+
+  /**
+
+   @public
+   @param arg0 {ConnectionRequest} 
+   */
+  this.handle = function(arg0) {
+    var __args = arguments;
+    if (__args.length === 1 && typeof __args[0] === 'object' && __args[0]._jdel) {
+      j_slackAdapter["handle(io.nonobot.core.adapter.ConnectionRequest)"](arg0._jdel);
+    } else throw new TypeError('function invoked with invalid arguments');
+  };
 
   // A reference to the underlying Java delegate
   // NOTE! This is an internal API and must not be used in user code.

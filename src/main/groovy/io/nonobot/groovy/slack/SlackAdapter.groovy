@@ -18,20 +18,23 @@ package io.nonobot.groovy.slack;
 import groovy.transform.CompileStatic
 import io.vertx.lang.groovy.InternalHelper
 import io.vertx.core.json.JsonObject
-import io.nonobot.groovy.core.adapter.BotAdapter
+import io.nonobot.groovy.core.adapter.ConnectionRequest
 import io.nonobot.slack.SlackOptions
+import io.vertx.core.Handler
 /**
  * @author <a href="mailto:julien@julienviet.com">Julien Viet</a>
 */
 @CompileStatic
-public class SlackAdapter extends BotAdapter {
+public class SlackAdapter implements Handler<ConnectionRequest> {
   private final def io.nonobot.slack.SlackAdapter delegate;
   public SlackAdapter(Object delegate) {
-    super((io.nonobot.slack.SlackAdapter) delegate);
     this.delegate = (io.nonobot.slack.SlackAdapter) delegate;
   }
   public Object getDelegate() {
     return delegate;
+  }
+  public void handle(ConnectionRequest arg0) {
+    ((io.vertx.core.Handler) this.delegate).handle((io.nonobot.core.adapter.ConnectionRequest)arg0.getDelegate());
   }
   public static SlackAdapter create(Map<String, Object> options = [:]) {
     def ret= InternalHelper.safeCreate(io.nonobot.slack.SlackAdapter.create(options != null ? new io.nonobot.slack.SlackOptions(new io.vertx.core.json.JsonObject(options)) : null), io.nonobot.groovy.slack.SlackAdapter.class);
