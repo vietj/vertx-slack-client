@@ -32,8 +32,9 @@ import org.junit.runner.RunWith;
 public class SlackTest {
 
   private static JsonObject json = new JsonObject().
-      put("channels", new JsonArray()).
-      put("self", new JsonObject().put("id", "12345").put("name", "slack_name")).
+      put("channels", new JsonArray().add(new JsonObject().put("id", "54321").put("name", "the_room").put("is_member", true))).
+      put("users", new JsonArray().add(new JsonObject().put("id", "12345").put("name", "the_user"))).
+      put("self", new JsonObject().put("id", "12345").put("name", "the_user")).
       put("url", "ws://localhost:8080/");
 
   protected Vertx vertx;
@@ -73,44 +74,50 @@ public class SlackTest {
   }
 
   @Test
-  public void testMessage1(TestContext context) throws Exception {
-    testMessage(context, "<@12345> ping");
+  public void testReceiveRoomMessage1(TestContext context) throws Exception {
+    testReceiveMessage(context, "<@12345> ping", "54321", "#the_room");
   }
 
   @Test
-  public void testMessage2(TestContext context) throws Exception {
-    testMessage(context, "<@12345>:ping");
+  public void testReceiveRoomMessage2(TestContext context) throws Exception {
+    testReceiveMessage(context, "<@12345>:ping", "54321", "#the_room");
   }
 
   @Test
-  public void testMessage3(TestContext context) throws Exception {
-    testMessage(context, "<@12345>: ping");
+  public void testReceiveRoomMessage3(TestContext context) throws Exception {
+    testReceiveMessage(context, "<@12345>: ping", "54321", "#the_room");
   }
 
   @Test
-  public void testMessage4(TestContext context) throws Exception {
-    testMessage(context, "slack_name ping");
+  public void testReceiveRoomMessage4(TestContext context) throws Exception {
+    testReceiveMessage(context, "the_user ping", "54321", "#the_room");
   }
 
   @Test
-  public void testMessage5(TestContext context) throws Exception {
-    testMessage(context, "@slack_name ping");
+  public void testReceiveRoomMessage5(TestContext context) throws Exception {
+    testReceiveMessage(context, "@the_user ping", "54321", "#the_room");
   }
 
   @Test
-  public void testMessage6(TestContext context) throws Exception {
-    testMessage(context, "@slack_name:ping");
+  public void testReceiveRoomMessage6(TestContext context) throws Exception {
+    testReceiveMessage(context, "@the_user:ping", "54321", "#the_room");
   }
 
   @Test
-  public void testMessage7(TestContext context) throws Exception {
-    testMessage(context, "slack_name:ping");
+  public void testReceiveRoomMessage7(TestContext context) throws Exception {
+    testReceiveMessage(context, "the_user:ping", "54321", "#the_room");
   }
 
-  private void testMessage(TestContext context, String text) throws Exception {
+  @Test
+  public void testReceiveDirectMessage(TestContext context) throws Exception {
+    testReceiveMessage(context, "the_user:ping", "12345", "@the_user");
+  }
+
+  private void testReceiveMessage(TestContext context, String text, String channelId, String expectedChatId) throws Exception {
     Async done = context.async();
     ChatRouter router = Bot.getShared(vertx).chatRouter();
     router.respond(".*", msg -> {
+      context.assertEquals(expectedChatId, msg.chatId());
       context.assertEquals("ping", msg.body());
       msg.reply("pong");
     });
@@ -122,12 +129,45 @@ public class SlackTest {
         ws.close();
         done.complete();
       });
-      ws.writeFinalTextFrame(new JsonObject().put("type", "message").put("text", text).encode());
+      ws.writeFinalTextFrame(new JsonObject().put("type", "message").put("text", text).put("channel", channelId).encode());
     });
   }
 
+  @Test
+  public void testSendMessageToRoomName(TestContext context) throws Exception {
+    testSendMessage(context, "#the_room", "54321");
+  }
+
+  @Test
+  public void testSendMessageToRoomId(TestContext context) throws Exception {
+    testSendMessage(context, "54321", "54321");
+  }
+
+  @Test
+  public void testSendMessageToUserName(TestContext context) throws Exception {
+    testSendMessage(context, "@the_user", "12345");
+  }
+
+  @Test
+  public void testSendMessageToUserId(TestContext context) throws Exception {
+    testSendMessage(context, "12345", "12345");
+  }
+
+  private void testSendMessage(TestContext context, String chatId, String expectedChannel) throws Exception {
+    Async async = context.async();
+    startServer(context, ws -> {
+      ws.handler(buff -> {
+        JsonObject json = buff.toJsonObject();
+        context.assertEquals("message", json.getString("type"));
+        context.assertEquals(expectedChannel, json.getString("channel"));
+        context.assertEquals("the_body", json.getString("text"));
+        async.complete();
+      });
+    });
+    vertx.eventBus().send("bots.nono.outbound", new JsonObject().put("chatId", chatId).put("body", "the_body"));
+  }
+
   private void startServer(TestContext context, Handler<ServerWebSocket> handler) throws Exception {
-    Bot bot = Bot.create(vertx);
     BotClient client = client();
     BotAdapter slackAdapter = BotAdapter.create(vertx).requestHandler(SlackAdapter.create(
         new SlackOptions().setClientOptions(new HttpClientOptions().setDefaultHost("localhost").setDefaultPort(8080))));
@@ -149,7 +189,6 @@ public class SlackTest {
 
   @Test
   public void testConnectHttpError1(TestContext context) throws Exception {
-    Bot bot = Bot.create(vertx);
     BotClient client = client();
     BotAdapter slackAdapter = BotAdapter.create(vertx).requestHandler(SlackAdapter.create(new SlackOptions().setClientOptions(new HttpClientOptions().
         setDefaultHost("localhost").setDefaultPort(8080))));
@@ -160,7 +199,6 @@ public class SlackTest {
 
   @Test
   public void testConnectHttpError2(TestContext context) throws Exception {
-    Bot bot = Bot.create(vertx);
     BotClient client = client();
     BotAdapter slackAdapter = BotAdapter.create(vertx).requestHandler(SlackAdapter.create(new SlackOptions().setClientOptions(new HttpClientOptions().
         setDefaultHost("localhost").setDefaultPort(8080))));
@@ -175,7 +213,6 @@ public class SlackTest {
 
   @Test
   public void testConnectWebSocketError(TestContext context) throws Exception {
-    Bot bot = Bot.create(vertx);
     BotClient client = client();
     BotAdapter slackAdapter = BotAdapter.create(vertx).requestHandler(SlackAdapter.create(new SlackOptions().setClientOptions(new HttpClientOptions().
         setDefaultHost("localhost").setDefaultPort(8080))));
@@ -193,7 +230,6 @@ public class SlackTest {
   @Test
   public void testServerClose(TestContext context) throws Exception {
     Async done = context.async(1);
-    Bot bot = Bot.create(vertx);
     BotClient client = client(v -> done.complete());
     BotAdapter slackAdapter = BotAdapter.create(vertx).requestHandler(SlackAdapter.create(new SlackOptions().setClientOptions(new HttpClientOptions().
         setDefaultHost("localhost").setDefaultPort(8080))));
@@ -214,7 +250,6 @@ public class SlackTest {
   @Test
   public void testClientClose(TestContext context) throws Exception {
     Async done = context.async(1);
-    Bot bot = Bot.create(vertx);
     BotClient client = client(v -> done.complete());
     BotAdapter slackAdapter = BotAdapter.create(vertx).requestHandler(SlackAdapter.create(new SlackOptions().setClientOptions(new HttpClientOptions().
         setDefaultHost("localhost").setDefaultPort(8080))));

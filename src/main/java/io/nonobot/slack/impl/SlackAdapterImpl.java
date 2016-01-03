@@ -19,9 +19,9 @@ import io.vertx.core.json.JsonObject;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -33,7 +33,8 @@ public class SlackAdapterImpl implements SlackAdapter {
   private final SlackOptions options;
   private WebSocket websocket;
   private long serial;
-  private Set<String> channels = new HashSet<>(); // All channels we belong to
+  private Map<String, String> channels = new HashMap<>(); // All channels we belong to id->name
+  private Map<String, String> users = new HashMap<>(); // All users id->name
   private String slackId; // Our own id
   private String slackName; // The slack name
 
@@ -92,8 +93,15 @@ public class SlackAdapterImpl implements SlackAdapter {
           for (int i = 0;i < channelsObj.size();i++) {
             JsonObject channelObj = channelsObj.getJsonObject(i);
             if (channelObj.getBoolean("is_member")) {
-              joinChannel(channelObj.getString("id"));
+              joinChannel(channelObj.getString("id"), channelObj.getString("name"));
             }
+          }
+
+          // Collect all known users
+          JsonArray usersObj = respObj.getJsonArray("users");
+          for (int i = 0;i < usersObj.size();i++) {
+            JsonObject userObj = usersObj.getJsonObject(i);
+            addUser(userObj.getString("id"), userObj.getString("name"));
           }
 
           slackId = respObj.getJsonObject("self").getString("id");
@@ -152,7 +160,26 @@ public class SlackAdapterImpl implements SlackAdapter {
       }
     });
     client.messageHandler(msg -> {
-      send(msg.chatId(), msg.body());
+      String chatId = msg.chatId();
+      if (chatId.startsWith("@")) {
+        String userName = chatId.substring(1);
+        for (Map.Entry<String, String> entry : users.entrySet()) {
+          if (entry.getValue().equals(userName)) {
+            sendToChannel(entry.getKey(), msg.body());
+            return;
+          }
+        }
+      } else if (chatId.startsWith("#")) {
+        String channelName = chatId.substring(1);
+        for (Map.Entry<String, String> entry : channels.entrySet()) {
+          if (entry.getValue().equals(channelName)) {
+            sendToChannel(entry.getKey(), msg.body());
+            return;
+          }
+        }
+      } else {
+        sendToChannel(chatId, msg.body());
+      }
     });
     ws.closeHandler(v -> {
       wsClose(client);
@@ -162,15 +189,22 @@ public class SlackAdapterImpl implements SlackAdapter {
     }
   }
 
-  private synchronized void leaveChannel(String channel) {
-    channels.remove(channel);
+  private synchronized void leaveChannel(String channelId) {
+    String name = channels.remove(channelId);
+    System.out.println("Left id=" + channelId + " name=" + name);
   }
 
-  private synchronized void joinChannel(String channel) {
-    channels.add(channel);
+  private synchronized void joinChannel(String channelId, String channelName) {
+    System.out.println("Joined id=" + channelId + " name=" + channelName);
+    channels.put(channelId, channelName);
   }
 
-  private void send(String channel, String msg) {
+  private synchronized void addUser(String userId, String userName) {
+    System.out.println("User id=" + userId + " name=" + userName);
+    users.put(userId, userName);
+  }
+
+  private void sendToChannel(String channel, String msg) {
     synchronized (SlackAdapterImpl.this) {
       serial++; // Need to sync on SlackAdapterImpl
       websocket.writeFinalTextFrame(new JsonObject().
@@ -181,11 +215,22 @@ public class SlackAdapterImpl implements SlackAdapter {
     }
   }
 
-  private synchronized void handleMessage(BotClient client, String msg, String channel) {
-    System.out.println("Handling message from " + channel + ": " + msg);
-    client.receiveMessage(new ReceiveOptions().setChatId(channel), msg, reply -> {
+  private synchronized void handleMessage(BotClient client, String msg, String channelId) {
+    System.out.println("Handling message from " + channelId + ": " + msg);
+    String chatId = channels.get(channelId);
+    if (chatId != null) {
+      chatId = "#" + chatId;
+    } else {
+      chatId = users.get(channelId);
+      if (chatId != null) {
+        chatId = "@" + chatId;
+      } else {
+        chatId = channelId;
+      }
+    }
+    client.receiveMessage(new ReceiveOptions().setChatId(chatId), msg, reply -> {
       if (reply.succeeded()) {
-        send(channel, reply.result());
+        sendToChannel(channelId, reply.result());
       } else {
         System.out.println("no reply for " + msg);
         reply.cause().printStackTrace();
@@ -198,20 +243,26 @@ public class SlackAdapterImpl implements SlackAdapter {
     String type = json.getString("type", "");
     switch (type) {
       case "channel_left": {
-        String channel = json.getString("channel");
-        System.out.println("Left " + channel);
-        leaveChannel(channel);
+        String id = json.getString("channel");
+        System.out.println("Left " + id);
+        leaveChannel(id);
         break;
       }
       case "channel_joined": {
-        String channel = json.getJsonObject("channel").getString("id");
-        System.out.println("Joined " + channel);
-        joinChannel(channel);
+        String id = json.getJsonObject("channel").getString("id");
+        String name = json.getJsonObject("channel").getString("name");
+        joinChannel(id, name);
+        break;
+      }
+      case "team_join": {
+        String id = json.getJsonObject("user").getString("id");
+        String name = json.getJsonObject("user").getString("name");
+        addUser(id, name);
+        users.put(id, name);
         break;
       }
       case "message":
         System.out.println("json = " + json);
-
         String text = json.getString("text");
         String channel = json.getString("channel");
         if (text != null) {
