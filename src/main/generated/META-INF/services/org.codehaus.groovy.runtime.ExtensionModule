@@ -1,0 +1,4 @@
+moduleName = com.julienviet.slack.SlackMessage-module
+moduleVersion = 1.0
+extensionClasses = com.julienviet.groovy.slack.SlackClient_GroovyExtension, com.julienviet.groovy.slack.SlackMessage_GroovyExtension
+staticExtensionClasses = com.julienviet.groovy.slack.SlackClient_GroovyStaticExtension

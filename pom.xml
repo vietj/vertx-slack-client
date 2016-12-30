@@ -33,7 +33,7 @@
   <name>Nonobot Slack Adapter</name>
 
   <properties>
-    <stack.version>3.2.0</stack.version>
+    <stack.version>3.4.1</stack.version>
     <termd.version>1.0.1</termd.version>
   </properties>
 
@@ -51,9 +51,8 @@
 
   <dependencies>
     <dependency>
-      <groupId>io.nonobot</groupId>
-      <artifactId>nonobot-core</artifactId>
-      <version>1.0.0</version>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-web-client</artifactId>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
