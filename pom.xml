@@ -26,9 +26,9 @@
     <version>19</version>
   </parent>
 
-  <groupId>io.nonobot</groupId>
-  <artifactId>nonobot-slack-adapter</artifactId>
-  <version>1.0.0</version>
+  <groupId>com.julienviet</groupId>
+  <artifactId>vertx-slack-client</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
 
   <name>Nonobot Slack Adapter</name>
 

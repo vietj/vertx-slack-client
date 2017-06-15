@@ -1,3 +1,0 @@
-## Slack client for Vert.x
-
-A Slack client for Vert.x
