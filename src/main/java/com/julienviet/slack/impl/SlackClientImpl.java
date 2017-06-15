@@ -273,13 +273,14 @@ public class SlackClientImpl implements SlackClient {
   }
 
   @Override
-  public void send(SlackChannel ch, String text) {
-    send(ch.getId(), text, null);
+  public SlackClient send(SlackChannel ch, String text) {
+    return send(ch, text, null);
   }
 
   @Override
-  public void send(SlackChannel ch, String text, Handler<AsyncResult<Void>> handler) {
+  public SlackClient send(SlackChannel ch, String text, Handler<AsyncResult<Void>> handler) {
     send(ch.getId(), text, handler);
+    return this;
   }
 
   void send(String channel, String msg, Handler<AsyncResult<Void>> handler) {
@@ -319,7 +320,7 @@ public class SlackClientImpl implements SlackClient {
     }
   }
 
-  public void getOrCreateIM(SlackUser user, Handler<AsyncResult<IMObject>> handler) {
+  public SlackClient getOrCreateIM(SlackUser user, Handler<AsyncResult<IMObject>> handler) {
     synchronized (this) {
       String id = user.getId();
       Optional<IMObject> opt = ims.values().stream().filter(im -> im.getUserId().equals(id)).findFirst();
@@ -347,10 +348,11 @@ public class SlackClientImpl implements SlackClient {
         });
       }
     }
+    return this;
   }
 
   @Override
-  public void joinChannel(ChannelObject channel, Handler<AsyncResult<Void>> handler) {
+  public SlackClient joinChannel(ChannelObject channel, Handler<AsyncResult<Void>> handler) {
     synchronized (this) {
       if (channel.isMember()) {
         vertx.getOrCreateContext().runOnContext(v -> {
@@ -383,6 +385,7 @@ public class SlackClientImpl implements SlackClient {
         });
       }
     }
+    return this;
   }
 
   void wsHandle(WebSocketFrame frame) {

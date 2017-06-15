@@ -43,13 +43,17 @@ public interface SlackClient {
 
   void start(Handler<AsyncResult<Void>> handler);
 
-  void getOrCreateIM(SlackUser user, Handler<AsyncResult<IMObject>> handler);
+  @Fluent
+  SlackClient getOrCreateIM(SlackUser user, Handler<AsyncResult<IMObject>> handler);
 
-  void joinChannel(ChannelObject ch, Handler<AsyncResult<Void>> handler);
+  @Fluent
+  SlackClient joinChannel(ChannelObject ch, Handler<AsyncResult<Void>> handler);
 
-  void send(SlackChannel ch, String text);
+  @Fluent
+  SlackClient send(SlackChannel ch, String text);
 
-  void send(SlackChannel ch, String text, Handler<AsyncResult<Void>> handler);
+  @Fluent
+  SlackClient send(SlackChannel ch, String text, Handler<AsyncResult<Void>> handler);
 
   void close();
 }
